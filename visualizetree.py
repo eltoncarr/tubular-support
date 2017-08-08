@@ -5,6 +5,7 @@ The below script is heavily based on reference from https://gist.github.com/matt
 from pymongo import MongoClient
 import graphviz as gv
 import functools
+import json
 
 def add_nodes(graph, nodes):
     for n in nodes:
@@ -89,12 +90,15 @@ def get_graph_node_edge(document):
 	
 	# handle original version
 	if u'original_version' in document:
-		edge = ((id_filter(document['_id']), id_filter(document['original_version'])), {'label': 'original'})
-		tree_node_edges.append(edge)
+        edge = ((id_filter(document['_id']), id_filter(document['original_version'])), {'label': 'original'})
+        tree_node_edges.append(edge)
 
 """
 MAIN OPERATIONS
-"""		
+"""
+
+# indicator of whether or not use live data
+use_live_data = False
 
 # Tree style
 styles = {
@@ -125,23 +129,35 @@ styles = {
 graph = functools.partial(gv.Graph, format='svg')
 digraph = functools.partial(gv.Digraph, format='svg')
 
-client = MongoClient()
-db = client.edxapp
-
-modulestore_activeversion_collection = db.modulestore.active_versions
-modulestore_structures_collection = db.modulestore.structures
-
 # collection of all available tree nodes
 tree_nodes = []
 tree_node_edges = []
 
-# Query all active versions and setup as nodes
-for document in modulestore_activeversion_collection.find({}):
-    get_graph_node_edge(document)
+if use_live_data == True:
 
-# Query all structures
-for document in modulestore_structures_collection.find({}):
-    get_graph_node_edge(document)
+    # use a local database as the source
+    client = MongoClient()
+    db = client.edxapp
+
+    modulestore_activeversion_collection = db.modulestore.active_versions
+    modulestore_structures_collection = db.modulestore.structures
+
+    # Query all active versions and setup as nodes
+    for document in modulestore_activeversion_collection.find({}):
+        get_graph_node_edge(document)
+
+    # Query all structures
+    for document in modulestore_structures_collection.find({}):
+        get_graph_node_edge(document)
+else:
+
+    # use a static dataset
+    with open('dataset.json') as data_file:    
+        dataset = json.load(data_file)
+
+    for document in dataset:
+        get_graph_node_edge(document)
+
 
 # Generate the graph
 print ("Generating graph. Adding edges...")
