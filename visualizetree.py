@@ -35,61 +35,77 @@ def apply_styles(graph, styles):
         ('edges' in styles and styles['edges']) or {}
     )
     return graph
-	
+
 def id_filter(id):
 
-	filtered_id=str(id)
-	if id is None:
-		filtered_id='null'
-	
-	return filtered_id
+    filtered_id=str(id)
+    if id is None:
+        filtered_id='null'
 
-	
+    return filtered_id
+
+def load_testdataset(dataset_file):
+    
+    """
+    Load the json dataset from the file specified
+    """
+
+    # check if the specified file exists
+    file_exists = os.path.isfile(dataset_file) 
+
+    if not file_exists :
+        raise IOError("The specified file doesn't exist: {0}".format(dataset_file))
+
+    # load the file
+    with open(dataset_file) as dataset:    
+        data = json.load(dataset)
+
+    return data
+
 def get_graph_node_edge(document):
-	
-	# setup local reference to tree nodes and edges
-	global tree_nodes
-	global tree_node_edges
-	
-	# initialize the node attribute
-	nodeAttribute={'label': id_filter(document['_id'])}
-	
-	# add available versions: draft, published, library (associated with active versions)
-	if u'versions' in document:
-		
-		nodeAttribute['fillcolor']='#4caf50'
-		
-		if u'draft-branch' in document['versions']:
-			edge = ((id_filter(document['_id']), id_filter(document['versions']['draft-branch'])), {'label': 'draft'})
-			tree_node_edges.append(edge)
-		
-		if u'published-branch' in document['versions']:
-			edge = ((id_filter(document['_id']), id_filter(document['versions']['published-branch'])), {'label': 'published'})
-			tree_node_edges.append(edge)
-		
-		if u'library' in document['versions']:
-			edge = ((id_filter(document['_id']), id_filter(document['versions']['library'])), {'label': 'library'})
-			tree_node_edges.append(edge)
-	
-	# QQ: are these the only attributes we care about?
-	# handle previous & original version
-	if u'previous_version' in document:
-		
-		# skip the null reference node (it complicates the graph)
-		if document['previous_version'] is not None:
-		
-			edge = ((id_filter(document['_id']), id_filter(document['previous_version'])), {'label': 'previous'})
-			tree_node_edges.append(edge)
-		else:
-			# instead of adding the null edge, let's visually style the null reference node
-			nodeAttribute['fillcolor']='#ff0000'
-			
-			
-	# add the node: the actual addition
-	tree_nodes.append((id_filter(document['_id']), nodeAttribute))
-	
-	# handle original version
-	if u'original_version' in document:
+
+    # setup local reference to tree nodes and edges
+    global tree_nodes
+    global tree_node_edges
+
+    # initialize the node attribute
+    nodeAttribute={'label': id_filter(document['_id'])}
+
+    # add available versions: draft, published, library (associated with active versions)
+    if u'versions' in document:
+
+        nodeAttribute['fillcolor']='#4caf50'
+
+        if u'draft-branch' in document['versions']:
+            edge = ((id_filter(document['_id']), id_filter(document['versions']['draft-branch'])), {'label': 'draft'})
+            tree_node_edges.append(edge)
+
+        if u'published-branch' in document['versions']:
+            edge = ((id_filter(document['_id']), id_filter(document['versions']['published-branch'])), {'label': 'published'})
+            tree_node_edges.append(edge)
+
+        if u'library' in document['versions']:
+            edge = ((id_filter(document['_id']), id_filter(document['versions']['library'])), {'label': 'library'})
+            tree_node_edges.append(edge)
+
+    # QQ: are these the only attributes we care about?
+    # handle previous & original version
+    if u'previous_version' in document:
+
+        # skip the null reference node (it complicates the graph)
+        if document['previous_version'] is not None:
+            edge = ((id_filter(document['_id']), id_filter(document['previous_version'])), {'label': 'previous'})
+            tree_node_edges.append(edge)
+        else:
+            # instead of adding the null edge, let's visually style the null reference node
+            nodeAttribute['fillcolor']='#ff0000'
+
+
+    # add the node: the actual addition
+    tree_nodes.append((id_filter(document['_id']), nodeAttribute))
+
+    # handle original version
+    if u'original_version' in document:
         edge = ((id_filter(document['_id']), id_filter(document['original_version'])), {'label': 'original'})
         tree_node_edges.append(edge)
 
@@ -152,11 +168,20 @@ if use_live_data == True:
 else:
 
     # use a static dataset
-    with open('dataset.json') as data_file:    
+    
+    with open('/home/eltonc/prune_output.json') as data_file:    
+    # with open('/home/eltonc/tubularnew/tubular/tests/test_prune_modulestore_data.json') as data_file:    
         dataset = json.load(data_file)
 
-    for document in dataset:
+    active_versions = dataset[u'active_versions']
+    structures = dataset[u'structures']
+
+    for document in active_versions:
         get_graph_node_edge(document)
+
+    for document in structures:
+        get_graph_node_edge(document)    
+
 
 
 # Generate the graph
@@ -167,4 +192,4 @@ print ("Graphing: Added Edges. Adding Styles...")
 courseTree = apply_styles(courseTree, styles)
 
 print ("Graphing: Added Styles. Rendering output")
-courseTree.render('img/coursetree')
+courseTree.render('img/prune_end_updated')
